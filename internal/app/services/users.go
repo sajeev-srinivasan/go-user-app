@@ -27,16 +27,17 @@ func (u users) GetUsers() []dto.User {
 	for _, user := range userResponse.Users {
 		users = append(users, user)
 	}
-
 	// Fetching users data concurrently
-	channel := make(chan dto.UserResponse, 5)
+	channel := make(chan dto.UserResponse, 2)
 	wg := sync.WaitGroup{}
 	for i := 2; i <= userResponse.TotalPages; i++ {
 		wg.Add(1)
 		go fetchUsers(i, channel, &wg)
 	}
-	wg.Wait()
-	close(channel)
+	go func(channel chan dto.UserResponse, wg *sync.WaitGroup) {
+		wg.Wait()
+		close(channel)
+	}(channel, &wg)
 
 	for response := range channel {
 		for _, user := range response.Users {
